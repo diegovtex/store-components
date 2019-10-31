@@ -7,6 +7,7 @@ import { orderFormConsumer } from 'vtex.store-resources/OrderFormContext'
 import ProductPrice from '../ProductPrice'
 import { graphql } from 'react-apollo'
 import { useCssHandles } from 'vtex.css-handles'
+import { addToCart as addToCartFromCheckout } from 'vtex.checkout-resources/Mutations'
 
 import { BuyButton } from './index'
 import { transformAssemblyOptions, sumAssembliesPrice } from './assemblyUtils'
@@ -41,9 +42,7 @@ const BuyButtonMessage = ({ showItemsPrice, skuItems }) => {
 
   return (
     <div
-      className={`${
-        handles.buttonDataContainer
-      } flex w-100 justify-between items-center`}
+      className={`${handles.buttonDataContainer} flex w-100 justify-between items-center`}
     >
       <FormattedMessage id="store/buy-button.add-to-cart">
         {message => <span className={handles.buyButtonText}>{message}</span>}
@@ -60,6 +59,7 @@ const BuyButtonMessage = ({ showItemsPrice, skuItems }) => {
 const BuyButtonWrapper = ({
   intl,
   addToCart,
+  addToCartFromCheckout,
   showToast,
   orderFormContext,
   onAddStart,
@@ -125,6 +125,7 @@ const BuyButtonWrapper = ({
     <BuyButton
       intl={intl}
       addToCart={addToCart}
+      addToCartFromCheckout={addToCartFromCheckout}
       onAddStart={onAddStart}
       onAddFinish={onAddFinish}
       showToast={showToast}
@@ -152,6 +153,13 @@ const withAddToCart = graphql(addToCartMutation, {
     addToCart: items => addToCart({ variables: { items } }),
   }),
 })
+const withAddToCartFromCheckout = graphql(addToCartFromCheckout, {
+  name: 'addToCartFromCheckout',
+  props: ({ addToCartFromCheckout }) => ({
+    addToCartFromCheckout: items =>
+      addToCartFromCheckout({ variables: { items } }),
+  }),
+})
 
 const withOpenMinicart = graphql(setOpenMinicartMutation, {
   name: 'setMinicartOpen',
@@ -162,6 +170,7 @@ const withOpenMinicart = graphql(setOpenMinicartMutation, {
 
 const EnhancedBuyButton = compose(
   withAddToCart,
+  withAddToCartFromCheckout,
   withOpenMinicart,
   withToast,
   injectIntl,

@@ -1,11 +1,11 @@
 import PropTypes from 'prop-types'
 import React, { useContext, useCallback, useState, Fragment } from 'react'
 import { intlShape, FormattedMessage } from 'react-intl'
-import { path } from 'ramda'
 import ContentLoader from 'react-content-loader'
 import { useRuntime } from 'vtex.render-runtime'
 import { usePWA } from 'vtex.store-resources/PWAContext'
 import { useCssHandles } from 'vtex.css-handles'
+import { useOrderForm } from 'vtex.order-manager/OrderForm'
 
 import { Button, ToastContext } from 'vtex.styleguide'
 
@@ -21,29 +21,15 @@ const CONSTANTS = {
 
 const CSS_HANDLES = ['buyButtonContainer', 'buyButtonText']
 
-const skuItemToMinicartItem = item => {
-  return {
-    // Important for the mutation
+function adjustItemsToMinicart(newItems) {
+  return newItems.map(item => ({
     id: item.skuId,
+    index: item.index,
     seller: item.seller,
-    options: item.options,
     quantity: item.quantity,
-
-    // Fields for optmistic cart
-    sellingPrice: item.price,
-    skuName: item.variant,
-    detailUrl: item.detailUrl,
-    imageUrl: item.imageUrl,
-    name: item.name,
-    listPrice: item.listPrice,
-    assemblyOptions: item.assemblyOptions,
-    sellingPriceWithAssemblies: item.sellingPriceWithAssemblies,
-
-    // Fields for Analytics
-    brand: item.brand,
-    category: item.category,
-    productRefId: item.productRefId,
-  }
+    uniqueId: item.uniqueId,
+    options: item.options,
+  }))
 }
 
 /**
@@ -55,7 +41,7 @@ export const BuyButton = ({
   shouldOpenMinicart = false,
   available = true,
   intl,
-  addToCart,
+  addToCartFromCheckout,
   setMinicartOpen,
   skuItems,
   onAddStart,
@@ -75,7 +61,7 @@ export const BuyButton = ({
   const translateMessage = useCallback(id => intl.formatMessage({ id: id }), [
     intl,
   ])
-  const orderFormItems = path(['orderForm', 'items'], orderFormContext)
+  const { orderForm, setOrderForm } = useOrderForm()
 
   const resolveToastMessage = (success, isNewItem) => {
     if (!success) return translateMessage(CONSTANTS.ERROR_MESSAGE_ID)
@@ -113,47 +99,39 @@ export const BuyButton = ({
     onAddStart && onAddStart()
 
     let showToastMessage
+
     try {
-      const minicartItems = skuItems.map(skuItemToMinicartItem)
-      const localStateMutationResult = !isOneClickBuy
-        ? await addToCart(minicartItems)
-        : null
-      const linkStateItems =
-        localStateMutationResult && localStateMutationResult.data.addToCart
-      const callOrderFormDirectly = !linkStateItems
+      const minicartItems = adjustItemsToMinicart(skuItems)
 
       let success = null
-      if (callOrderFormDirectly) {
-        const variables = {
-          orderFormId: orderFormContext.orderForm.orderFormId,
-          items: skuItems.map(item => ({
-            id: item.skuId,
-            seller: item.seller,
-            options: item.options,
-            quantity: item.quantity,
-          })),
-        }
-        const mutationRes = await orderFormContext.addItem({ variables })
-        const { items } = mutationRes.data.addItem
 
-        success = skuItems.filter(
-          skuItem => !!items.find(({ id }) => id === skuItem.skuId)
-        )
-        await orderFormContext.refetch().catch(() => null)
-      }
+      const mutationResult = await addToCartFromCheckout(minicartItems)
+      const { items } = mutationResult.data.addToCart
+
+      success = skuItems.filter(
+        skuItem => !!items.find(({ id }) => id === skuItem.skuId)
+      )
 
       const addedItem =
-        (linkStateItems &&
+        (items &&
           skuItems.filter(
-            skuItem => !!linkStateItems.find(({ id }) => id === skuItem.skuId)
+            skuItem => !!items.find(({ id }) => id === skuItem.skuId)
           )) ||
         success
 
       const foundItem =
-        orderFormItems &&
-        orderFormItems.filter(item => item.id === addedItem[0].skuId).length > 0
+        orderForm.items &&
+        orderForm.items.filter(item => item.id === addedItem[0].skuId).length >
+          0
 
       success = addedItem
+
+      if (success && success.length >= 1) {
+        setOrderForm({
+          ...orderForm,
+          items,
+        })
+      }
 
       showToastMessage = () =>
         toastMessage({
