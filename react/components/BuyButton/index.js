@@ -127,10 +127,7 @@ export const BuyButton = ({
       success = addedItem
 
       if (success && success.length >= 1) {
-        setOrderForm({
-          ...orderForm,
-          items,
-        })
+        setOrderForm(mutationResult.data.addToCart)
       }
 
       showToastMessage = () =>
