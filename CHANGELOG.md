@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+Färger (sv_SE) , farby (sk-sk) and boje(rs) to the array of colors of SKUSelector
 
 ## [3.108.0] - 2020-03-19
 ### Added
