@@ -70,6 +70,8 @@ export const isColor = (variation: string) => {
     'farby',
     'boje',
     'colori',
+    'colori'
+    'Värit',
   ]
 
   return possibleValues.includes(variation.toLowerCase())
